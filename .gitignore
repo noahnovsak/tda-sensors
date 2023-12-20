@@ -1,0 +1,12 @@
+# Build files
+__pycache__
+
+# Editor files
+.idea
+.idea/*
+*~
+.project
+.pydevproject
+.settings/*
+.DS_Store
+
