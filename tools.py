@@ -1,11 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import gudhi
-import miniball
-from ripser import ripser
-from persim import plot_diagrams
-from scipy.spatial import distance_matrix, SphericalVoronoi, geometric_slerp, ConvexHull
-from scipy.optimize import minimize
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from scipy.spatial import SphericalVoronoi, geometric_slerp, ConvexHull
 from itertools import chain, combinations
 
 
@@ -73,18 +69,26 @@ def connected_gudhi(points, tree):
     return len(dfs(edges, 0)) == len(points)
 
 
-def plot_sensors(points, hull=False, voronoi=False, vertices=False, fill=False, obsolete=[]):
-    fig = plt.figure(figsize=(8, 8))
+def plot_sensors(points, scatter=True, hull=False, voronoi=False, vertices=False, fill=False,
+                 obsolete=None, save=None, solid=False, rotation=None):
+    fig = plt.figure(figsize=(6, 6))
     ax = fig.add_subplot(projection='3d', aspect='equal')
+    ax.set_xticks([-1, -.5, 0, .5, 1])
+    ax.set_yticks([-1, -.5, 0, .5, 1])
+    ax.set_zticks([-1, -.5, 0, .5, 1])
+    ax.set_facecolor('white')
 
-    ax.scatter(points[obsolete, 0],
-               points[obsolete, 1],
-               points[obsolete, 2],
-               c='r', marker='x')
-    points = np.delete(points, obsolete, axis=0)
-    ax.scatter(points[:, 0],
-               points[:, 1],
-               points[:, 2])
+    if scatter:
+        obsolete = [] if obsolete is None else obsolete
+        ax.scatter(points[obsolete, 0],
+                   points[obsolete, 1],
+                   points[obsolete, 2],
+                   c='g', marker='x')
+        points = np.delete(points, obsolete, axis=0)
+        ax.scatter(points[:, 0],
+                   points[:, 1],
+                   points[:, 2],
+                   c='C0')
 
     if hull:
         hull = ConvexHull(points)
@@ -98,6 +102,11 @@ def plot_sensors(points, hull=False, voronoi=False, vertices=False, fill=False, 
                         line[:, 2],
                         c='k')
 
+    if solid:
+        hull = ConvexHull(points)
+        poly = Poly3DCollection(points[hull.simplices])
+        ax.add_collection3d(poly)
+
     if voronoi:
         voronoi = SphericalVoronoi(points)
         voronoi.sort_vertices_of_regions()
@@ -105,7 +114,8 @@ def plot_sensors(points, hull=False, voronoi=False, vertices=False, fill=False, 
         if vertices:
             ax.scatter(voronoi.vertices[:, 0],
                        voronoi.vertices[:, 1],
-                       voronoi.vertices[:, 2])
+                       voronoi.vertices[:, 2],
+                       c='C1')
         t = np.linspace(0, 1, 10)
         for region in voronoi.regions:
             region = voronoi.vertices[region]
@@ -124,6 +134,15 @@ def plot_sensors(points, hull=False, voronoi=False, vertices=False, fill=False, 
         ax.plot_surface(np.outer(np.cos(u), np.sin(v)),
                         np.outer(np.sin(u), np.sin(v)),
                         np.outer(np.ones(np.size(u)), np.cos(v)),
-                        alpha=.1)
+                        alpha=.1, linewidth=0)
 
-    plt.show()
+    if rotation is not None:
+        ax.view_init(*rotation)
+
+    plt.tight_layout()
+    if save is not None:
+        plt.savefig(save)
+    else:
+        plt.show()
+    plt.clf()
+    plt.close()
